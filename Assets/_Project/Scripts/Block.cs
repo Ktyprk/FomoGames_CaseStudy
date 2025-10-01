@@ -39,11 +39,14 @@ public class Block : MonoBehaviour
         allowedDirections = new List<int>(info.Direction);
         gameManager = manager;
         
+        // Hareket tipini belirle
         isVertical = allowedDirections.Contains(0) || allowedDirections.Contains(2);
         isHorizontal = allowedDirections.Contains(1) || allowedDirections.Contains(3);
-        
+
+        // Blok boyutunu ve rotasyonunu ayarla
         SetupBlockVisual();
         
+        // Texture'ı uygula
         ApplyTexture();
     }
 
@@ -59,7 +62,7 @@ public class Block : MonoBehaviour
             if (Length == 1)
                 transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
             else
-                transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth * 2);
+                transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth );
         }
         else if (isHorizontal && !isVertical)
         {
@@ -68,7 +71,7 @@ public class Block : MonoBehaviour
             if (Length == 1)
                 transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
             else
-                transform.localScale = new Vector3(blockWidth * 2, blockHeight, blockWidth);
+                transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
         }
     }
 
@@ -182,6 +185,31 @@ public class Block : MonoBehaviour
         return true;
     }
 
+    List<Vector2Int> GetOccupiedCells(Vector2Int baseCell)
+    {
+        List<Vector2Int> cells = new List<Vector2Int>();
+        cells.Add(baseCell);
+
+        if (Length == 2)
+        {
+            if (isVertical && !isHorizontal)
+            {
+                cells.Add(new Vector2Int(baseCell.x + 1, baseCell.y));
+            }
+            else if (isHorizontal && !isVertical)
+            {
+                cells.Add(new Vector2Int(baseCell.x, baseCell.y + 1));
+            }
+        }
+
+        return cells;
+    }
+
+    public List<Vector2Int> GetOccupiedCells()
+    {
+        return GetOccupiedCells(new Vector2Int(Row, Col));
+    }
+
     int GetDirection(Vector2Int from, Vector2Int to)
     {
         Vector2Int delta = to - from;
@@ -196,7 +224,7 @@ public class Block : MonoBehaviour
 
     void CheckExitReached()
     {
-        Collider[] colliders = Physics.OverlapSphere(transform.position, 0.3f);
+        Collider[] colliders = Physics.OverlapSphere(transform.position, 1f);
         foreach (var col in colliders)
         {
             ExitTrigger exit = col.GetComponent<ExitTrigger>();

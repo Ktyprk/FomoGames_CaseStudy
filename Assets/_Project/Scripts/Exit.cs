@@ -14,8 +14,8 @@ public class ExitTrigger : MonoBehaviour
         col = info.Col;
         direction = info.Direction;
         
-        MeshRenderer renderer = GetComponentInChildren<MeshRenderer>();
-        if (renderer != null)
+        MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>();
+        foreach (MeshRenderer renderer in renderers)
         {
             Material mat = new Material(exitMaterial);
             mat.color = visualColor;
@@ -28,29 +28,23 @@ public class ExitTrigger : MonoBehaviour
     void SetupExitVisual()
     {
         float rotation = 0;
-        Vector3 scale = Vector3.one;
 
         switch (direction)
         {
             case 0: // Up
                 rotation = 0;
-                scale = new Vector3(0.3f, 0.2f, 0.15f);
                 break;
             case 1: // Right
                 rotation = 90;
-                scale = new Vector3(0.3f, 0.2f, 0.15f);
                 break;
             case 2: // Down
                 rotation = 180;
-                scale = new Vector3(0.3f, 0.2f, 0.15f);
                 break;
             case 3: // Left
                 rotation = 270;
-                scale = new Vector3(0.3f, 0.2f, 0.15f);
                 break;
         }
 
         transform.rotation = Quaternion.Euler(0, rotation, 0);
-        transform.localScale = scale;
     }
 }

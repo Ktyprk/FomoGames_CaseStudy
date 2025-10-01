@@ -12,7 +12,7 @@ public class UIManager : MonoBehaviour
     {
         if (resetButton != null)
         {
-            resetButton.onClick.AddListener(() => gameManager.ResetLevel());
+            //resetButton.onClick.AddListener(() => gameManager.ResetLevel());
         }
     }
 }

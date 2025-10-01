@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
@@ -8,33 +7,30 @@ public class GameManager : MonoBehaviour
 
     [Header("Prefabs")]
     public GameObject cellPrefab;
-    public GameObject blockPrefab;
+    public GameObject block1Prefab;
+    public GameObject block2Prefab;
     public GameObject exitPrefab;
 
     [Header("Settings")]
     public float cellSize = 1f;
     public TextureManager textureManager;
-    
-    [Header("Level Data")]
-    public TextAsset levelJsonFile;
 
     [Header("Materials")]
-    public Material blockMaterial; 
+    public Material blockMaterial;
     public Material exitMaterial;
 
     [Header("Exit Colors")]
     public Color[] exitColors = new Color[]
-    {
-        new Color(0.23f, 0.51f, 0.96f), // 0: Blue
-        Color.white,                      // 1: White
-        new Color(0.06f, 0.73f, 0.51f), // 2: Green
-        new Color(0.96f, 0.62f, 0.04f), // 3: Orange
-        new Color(0.94f, 0.29f, 0.29f)  // 4: Red
+    { 
+        Color.red,
+        Color.green,
+        Color.blue,
+        Color.yellow,
+        Color.magenta
     };
 
     private LevelData currentLevel;
     private List<Block> blocks = new List<Block>();
-    private int moveCount = 0;
     private int blocksRemaining;
 
     private Dictionary<Vector2Int, GameObject> cellObjects = new Dictionary<Vector2Int, GameObject>();
@@ -47,21 +43,22 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        LoadLevel();
-        CreateLevel();
+        // LevelController ilk level'ı yükleyecek
     }
 
-    void LoadLevel()
+    public void LoadLevelFromJson(TextAsset jsonFile)
     {
-        if (levelJsonFile != null)
+        if (jsonFile == null)
         {
-            currentLevel = JsonUtility.FromJson<LevelData>(levelJsonFile.text);
-            blocksRemaining = currentLevel.MovableInfo.Count;
+            Debug.LogError("Level JSON is null!");
+            return;
         }
-        else
-        {
-            Debug.LogError("Level JSON file not assigned!");
-        }
+        ClearLevel();
+        
+        currentLevel = JsonUtility.FromJson<LevelData>(jsonFile.text);
+        blocksRemaining = currentLevel.MovableInfo.Count;
+        
+        CreateLevel();
     }
 
     void CreateLevel()
@@ -73,7 +70,7 @@ public class GameManager : MonoBehaviour
             cell.name = $"Cell_{cellInfo.Row}_{cellInfo.Col}";
             cellObjects[new Vector2Int(cellInfo.Row, cellInfo.Col)] = cell;
         }
-        
+
         foreach (var exitInfo in currentLevel.ExitInfo)
         {
             Vector3 cellPosition = GetWorldPosition(exitInfo.Row, exitInfo.Col);
@@ -88,11 +85,13 @@ public class GameManager : MonoBehaviour
                 exitTriggers.Add(exitComponent);
             }
         }
-        
+
         foreach (var movableInfo in currentLevel.MovableInfo)
         {
             Vector3 position = GetWorldPosition(movableInfo.Row, movableInfo.Col);
-            GameObject blockObj = Instantiate(blockPrefab, position, Quaternion.identity);
+            
+            GameObject prefabToUse = movableInfo.Length == 2 ? block2Prefab : block1Prefab;
+            GameObject blockObj = Instantiate(prefabToUse, position, Quaternion.identity);
             
             Block block = blockObj.GetComponent<Block>();
             if (block != null)
@@ -130,7 +129,17 @@ public class GameManager : MonoBehaviour
 
     public bool IsBlockAt(Vector2Int pos, Block excludeBlock)
     {
-        return blocks.Any(b => b != null && b != excludeBlock && b.Row == pos.x && b.Col == pos.y);
+        foreach (var block in blocks)
+        {
+            if (block == null || block == excludeBlock) 
+                continue;
+
+            List<Vector2Int> occupiedCells = block.GetOccupiedCells();
+            if (occupiedCells.Contains(pos))
+                return true;
+        }
+        
+        return false;
     }
 
     public void OnBlockReachedExit(Block block)
@@ -142,22 +151,29 @@ public class GameManager : MonoBehaviour
 
         if (blocksRemaining <= 0)
         {
-            Debug.Log("Level Complete!");
-            Invoke("LoadNextLevel", 1f);
+            Debug.Log("All blocks cleared!");
+            
+            if (LevelController.Instance != null)
+            {
+                LevelController.Instance.OnLevelComplete();
+            }
         }
-    }
-
-    void LoadNextLevel()
-    {
-        Debug.Log("Loading next level...");
     }
 
     public void IncrementMoveCount()
     {
-        moveCount++;
+        if (LevelController.Instance != null)
+        {
+            LevelController.Instance.IncrementMoveCount();
+        }
     }
 
-    public void ResetLevel()
+    public int GetMaxMoves()
+    {
+        return currentLevel != null ? currentLevel.MoveLimit : 0;
+    }
+
+    void ClearLevel()
     {
         foreach (var cell in cellObjects.Values)
             Destroy(cell);
@@ -170,8 +186,5 @@ public class GameManager : MonoBehaviour
         foreach (var exit in exitTriggers)
             if (exit != null) Destroy(exit.gameObject);
         exitTriggers.Clear();
-
-        moveCount = 0;
-        CreateLevel();
     }
 }
