@@ -26,12 +26,10 @@ public class LevelController : MonoBehaviour
 
     void Start()
     {
-        //ResetProgress();
+        ResetProgress();
         LoadSavedLevel();
     }
-
-    #region Level Loading
-
+    
     void LoadSavedLevel()
     {
         currentLevelIndex = PlayerPrefs.GetInt(CURRENT_LEVEL_KEY, 0);
@@ -160,8 +158,6 @@ public class LevelController : MonoBehaviour
             UIManager.Instance.ShowLosePanel();
         }
     }
-
-    #endregion
 
     public void OnLevelComplete()
     {

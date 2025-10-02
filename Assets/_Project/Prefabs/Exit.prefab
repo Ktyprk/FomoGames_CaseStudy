@@ -187,6 +187,7 @@ GameObject:
   - component: {fileID: 3040944935340017919}
   - component: {fileID: 2586392752224302225}
   - component: {fileID: 892274184161690673}
+  - component: {fileID: 7410910454395437538}
   m_Layer: 0
   m_Name: Exit
   m_TagString: Exit
@@ -298,6 +299,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   particleSystem: {fileID: 2586392752224302225}
+  exitAnimator: {fileID: 7410910454395437538}
 --- !u!198 &2586392752224302225
 ParticleSystem:
   m_ObjectHideFlags: 0
@@ -5107,3 +5109,25 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
+--- !u!95 &7410910454395437538
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8186818010779550752}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 7c698582610bd3f459f2bce2065486a5, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
