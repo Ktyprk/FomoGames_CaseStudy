@@ -39,14 +39,11 @@ public class Block : MonoBehaviour
         allowedDirections = new List<int>(info.Direction);
         gameManager = manager;
         
-        // Hareket tipini belirle
         isVertical = allowedDirections.Contains(0) || allowedDirections.Contains(2);
         isHorizontal = allowedDirections.Contains(1) || allowedDirections.Contains(3);
 
-        // Blok boyutunu ve rotasyonunu ayarla
         SetupBlockVisual();
         
-        // Texture'ı uygula
         ApplyTexture();
     }
 
@@ -255,6 +252,6 @@ public class Block : MonoBehaviour
             yield return null;
         }
 
-        gameManager.OnBlockReachedExit(this);
+        gameManager.OnBlockReachedExit(this, null);
     }
 }

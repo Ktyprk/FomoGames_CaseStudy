@@ -9,6 +9,9 @@ public class LevelController : MonoBehaviour
     private int maxMoves = 0;
     private bool levelCompleted = false;
 
+    private const string CURRENT_LEVEL_KEY = "CurrentLevel";
+    private const string HIGHEST_LEVEL_KEY = "HighestLevel";
+
     void Awake()
     {
         if (Instance == null)
@@ -23,6 +26,17 @@ public class LevelController : MonoBehaviour
 
     void Start()
     {
+        //ResetProgress();
+        LoadSavedLevel();
+    }
+
+    #region Level Loading
+
+    void LoadSavedLevel()
+    {
+        currentLevelIndex = PlayerPrefs.GetInt(CURRENT_LEVEL_KEY, 0);
+        Debug.Log($"Kaydedilmiş seviye yükleniyor: Level {currentLevelIndex + 1}");
+        
         LoadLevel(currentLevelIndex);
     }
 
@@ -41,40 +55,19 @@ public class LevelController : MonoBehaviour
                 
                 int levelMaxMoves = GameManager.Instance.GetMaxMoves();
                 SetMaxMoves(levelMaxMoves);
+                
+                if (UIManager.Instance != null)
+                {
+                    UIManager.Instance.UpdateLevelNumber(levelIndex + 1);
+                }
             }
+            
+            SaveCurrentLevel(levelIndex);
         }
         else
         {
             Debug.LogError($"Level {levelIndex + 1} bulunamadı! Resources/Levels/Level{levelIndex + 1}.json dosyasını kontrol edin.");
         }
-    }
-
-    public void SetMaxMoves(int moves)
-    {
-        maxMoves = moves;
-        currentMoveCount = 0;
-        levelCompleted = false;
-        UpdateUI();
-    }
-
-    public void IncrementMoveCount()
-    {
-        if (levelCompleted) return;
-
-        currentMoveCount++;
-        UpdateUI();
-
-        if (maxMoves > 0 && currentMoveCount >= maxMoves)
-        {
-            Invoke("ResetCurrentLevel", 1f);
-        }
-    }
-
-    public void OnLevelComplete()
-    {
-        if (levelCompleted) return;
-        levelCompleted = true;
-        Invoke("LoadNextLevel", 1.5f);
     }
 
     void LoadNextLevel()
@@ -98,41 +91,124 @@ public class LevelController : MonoBehaviour
 
     void ResetCurrentLevel()
     {
+        Debug.Log("Level resetleniyor...");
         LoadLevel(currentLevelIndex);
+    }
+
+    void SaveCurrentLevel(int levelIndex)
+    {
+        PlayerPrefs.SetInt(CURRENT_LEVEL_KEY, levelIndex);
+        PlayerPrefs.Save();
+        Debug.Log($"Level {levelIndex + 1} kaydedildi.");
+    }
+
+    void SaveHighestLevel(int levelIndex)
+    {
+        int highestLevel = PlayerPrefs.GetInt(HIGHEST_LEVEL_KEY, 0);
+        
+        if (levelIndex > highestLevel)
+        {
+            PlayerPrefs.SetInt(HIGHEST_LEVEL_KEY, levelIndex);
+            PlayerPrefs.Save();
+            Debug.Log($"En yüksek seviye güncellendi: Level {levelIndex + 1}");
+        }
+    }
+
+    public int GetHighestLevel()
+    {
+        return PlayerPrefs.GetInt(HIGHEST_LEVEL_KEY, 0);
+    }
+
+    public void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey(CURRENT_LEVEL_KEY);
+        PlayerPrefs.DeleteKey(HIGHEST_LEVEL_KEY);
+        PlayerPrefs.Save();
+        
+        currentLevelIndex = 0;
+        LoadLevel(currentLevelIndex);
+        
+        Debug.Log("Oyun ilerlemesi sıfırlandı!");
+    }
+    
+    public void SetMaxMoves(int moves)
+    {
+        maxMoves = moves;
+        currentMoveCount = 0;
+        levelCompleted = false;
+        UpdateUI();
+    }
+
+    public void IncrementMoveCount()
+    {
+        if (levelCompleted) return;
+
+        currentMoveCount++;
+        UpdateUI();
+
+        if (maxMoves > 0 && currentMoveCount >= maxMoves)
+        {
+            Debug.Log("Hamle sayısı doldu!");
+            OnOutOfMoves();
+        }
+    }
+
+    void OnOutOfMoves()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowLosePanel();
+        }
+    }
+
+    #endregion
+
+    public void OnLevelComplete()
+    {
+        if (levelCompleted) return;
+
+        levelCompleted = true;
+        Debug.Log($"Level {currentLevelIndex + 1} tamamlandı! Kullanılan hamle: {currentMoveCount}/{maxMoves}");
+        
+        SaveHighestLevel(currentLevelIndex);
+        
+        Invoke("ShowWinPanel", 0.5f);
+    }
+
+    void ShowWinPanel()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowWinPanel(currentMoveCount, maxMoves);
+        }
+    }
+
+    public void LoadNextLevelFromButton()
+    {
+        LoadNextLevel();
+    }
+
+    public void RestartLevel()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.HideWinPanel();
+            UIManager.Instance.HideLosePanel();
+        }
+        
+        ResetCurrentLevel();
     }
 
     void UpdateUI()
     {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateMoveCount(currentMoveCount, maxMoves);
+        }
+
         if (maxMoves > 0)
         {
             Debug.Log($"Hamle: {currentMoveCount}/{maxMoves}");
         }
-        else
-        {
-            //Debug.Log($"Hamle: {currentMoveCount} (Sınırsız)");
-        }
     }
-
-    public int GetCurrentLevelIndex()
-    {
-        return currentLevelIndex;
-    }
-
-    public int GetCurrentMoveCount()
-    {
-        return currentMoveCount;
-    }
-
-    public int GetMaxMoves()
-    {
-        return maxMoves;
-    }
-
-    public int GetRemainingMoves()
-    {
-        if (maxMoves == 0)
-            return -1; 
-            
-        return Mathf.Max(0, maxMoves - currentMoveCount);
-    }
-    }
+}
