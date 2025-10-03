@@ -24,6 +24,9 @@ public class Block : MonoBehaviour
     private bool isVertical;
     private bool isHorizontal;
 
+    [SerializeField] private float dragThreshold = 0.3f;
+    [SerializeField] private float moveSpeed = 8f;
+
     void Awake()
     {
         mainCamera = Camera.main;
@@ -43,7 +46,6 @@ public class Block : MonoBehaviour
         isHorizontal = allowedDirections.Contains(1) || allowedDirections.Contains(3);
 
         SetupBlockVisual();
-        
         ApplyTexture();
     }
 
@@ -55,20 +57,12 @@ public class Block : MonoBehaviour
         if (isVertical && !isHorizontal)
         {
             transform.rotation = Quaternion.Euler(0, 90, 0);
-            
-            if (Length == 1)
-                transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
-            else
-                transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth );
+            transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
         }
         else if (isHorizontal && !isVertical)
         {
             transform.rotation = Quaternion.Euler(0, 0, 0);
-            
-            if (Length == 1)
-                transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
-            else
-                transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
+            transform.localScale = new Vector3(blockWidth, blockHeight, blockWidth);
         }
     }
 
@@ -78,7 +72,6 @@ public class Block : MonoBehaviour
             return;
 
         bool isParallel = isHorizontal; 
-        
         Texture texture = gameManager.textureManager.GetTexture(ColorId, Length, isParallel);
         
         if (texture != null)
@@ -96,7 +89,6 @@ public class Block : MonoBehaviour
         isDragging = true;
         dragStartPos = transform.position;
         dragStartCell = new Vector2Int(Row, Col);
-        
         dragPlane = new Plane(Vector3.up, transform.position);
     }
 
@@ -105,81 +97,126 @@ public class Block : MonoBehaviour
         if (!isDragging || IsMoving) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        float enter;
-        
-        if (dragPlane.Raycast(ray, out enter))
-        {
-            Vector3 hitPoint = ray.GetPoint(enter);
-            Vector3 delta = hitPoint - dragStartPos;
+        if (!dragPlane.Raycast(ray, out float enter)) return;
 
-            Vector3 constrainedDelta = ConstrainMovement(delta);
-            Vector3 targetPos = dragStartPos + constrainedDelta;
-            
-            Vector2Int targetCell = WorldToGrid(targetPos);
-            
-            if (CanMoveTo(targetCell))
-            {
-                transform.position = gameManager.GetWorldPosition(targetCell.x, targetCell.y);
-                Row = targetCell.x;
-                Col = targetCell.y;
-            }
-        }
+        Vector3 hitPoint = ray.GetPoint(enter);
+        Vector3 delta = hitPoint - dragStartPos;
+        Vector3 constrained = ConstrainMovement(delta);
+
+        int? dir = GetDragDirection(constrained);
+        if (!dir.HasValue) return;
+
+        int steps = ComputeMaxSteps(dir.Value);
+        if (steps <= 0) return;
+
+        StartCoroutine(SmoothMove(dir.Value, steps));
+        isDragging = false;
     }
 
     void OnMouseUp()
     {
-        if (!isDragging) return;
-        
         isDragging = false;
+    }
 
-        if (Row != dragStartCell.x || Col != dragStartCell.y)
+    IEnumerator SmoothMove(int dir, int steps)
+    {
+        IsMoving = true;
+
+        Vector2Int step = StepVec(dir);
+        Vector2Int targetCell = new Vector2Int(Row, Col) + step * steps;
+        Vector3 targetPos = gameManager.GetWorldPosition(targetCell.x, targetCell.y);
+
+        float distance = Vector3.Distance(transform.position, targetPos);
+        float duration = distance / moveSpeed;
+        float elapsed = 0;
+        Vector3 startPos = transform.position;
+
+        while (elapsed < duration)
         {
-            gameManager.IncrementMoveCount();
-            CheckExitReached();
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            transform.position = Vector3.Lerp(startPos, targetPos, t);
+            yield return null;
         }
-        else
+
+        transform.position = targetPos;
+        Row = targetCell.x;
+        Col = targetCell.y;
+
+        IsMoving = false;
+
+        gameManager.IncrementMoveCount();
+        CheckExitReached();
+    }
+
+    int? GetDragDirection(Vector3 constrainedDelta)
+    {
+        bool vertical = allowedDirections.Contains(0) || allowedDirections.Contains(2);
+        bool horizontal = allowedDirections.Contains(1) || allowedDirections.Contains(3);
+
+        if (vertical && Mathf.Abs(constrainedDelta.z) > dragThreshold)
+            return (constrainedDelta.z > 0f) ? 0 : 2;
+
+        if (horizontal && Mathf.Abs(constrainedDelta.x) > dragThreshold)
+            return (constrainedDelta.x > 0f) ? 1 : 3;
+
+        return null;
+    }
+
+    Vector2Int StepVec(int dir)
+    {
+        switch (dir)
         {
-            transform.position = dragStartPos;
+            case 0: return new Vector2Int(-1, 0);  // Up
+            case 1: return new Vector2Int(0, 1);   // Right
+            case 2: return new Vector2Int(1, 0);   // Down
+            case 3: return new Vector2Int(0, -1);  // Left
+            default: return Vector2Int.zero;
         }
+    }
+
+    int ComputeMaxSteps(int dir)
+    {
+        Vector2Int step = StepVec(dir);
+        Vector2Int curBase = new Vector2Int(Row, Col);
+        int canMove = 0;
+
+        while (true)
+        {
+            Vector2Int nextBase = curBase + step;
+            List<Vector2Int> footprint = GetOccupiedCells(nextBase);
+
+            if (!IsFootprintValid(footprint))
+                break;
+
+            canMove++;
+            curBase = nextBase;
+        }
+
+        return canMove;
+    }
+
+    bool IsFootprintValid(List<Vector2Int> footprint)
+    {
+        foreach (var cell in footprint)
+        {
+            if (!gameManager.IsValidPosition(cell.x, cell.y))
+                return false;
+
+            if (gameManager.IsBlockAt(cell, this))
+                return false;
+        }
+        return true;
     }
 
     Vector3 ConstrainMovement(Vector3 delta)
     {
         if (isVertical && !isHorizontal)
-        {
             return new Vector3(0, 0, delta.z);
-        }
         else if (isHorizontal && !isVertical)
-        {
             return new Vector3(delta.x, 0, 0);
-        }
 
         return delta;
-    }
-
-    Vector2Int WorldToGrid(Vector3 worldPos)
-    {
-        int col = Mathf.RoundToInt(worldPos.x / gameManager.cellSize);
-        int row = Mathf.RoundToInt(-worldPos.z / gameManager.cellSize);
-        return new Vector2Int(row, col);
-    }
-
-    bool CanMoveTo(Vector2Int targetCell)
-    {
-        if (targetCell.x == Row && targetCell.y == Col)
-            return true;
-
-        if (!gameManager.IsValidPosition(targetCell.x, targetCell.y))
-            return false;
-
-        if (gameManager.IsBlockAt(targetCell, this))
-            return false;
-
-        int direction = GetDirection(new Vector2Int(Row, Col), targetCell);
-        if (direction == -1 || !allowedDirections.Contains(direction))
-            return false;
-
-        return true;
     }
 
     List<Vector2Int> GetOccupiedCells(Vector2Int baseCell)
@@ -190,13 +227,9 @@ public class Block : MonoBehaviour
         if (Length == 2)
         {
             if (isVertical && !isHorizontal)
-            {
                 cells.Add(new Vector2Int(baseCell.x + 1, baseCell.y));
-            }
             else if (isHorizontal && !isVertical)
-            {
                 cells.Add(new Vector2Int(baseCell.x, baseCell.y + 1));
-            }
         }
 
         return cells;
@@ -207,18 +240,6 @@ public class Block : MonoBehaviour
         return GetOccupiedCells(new Vector2Int(Row, Col));
     }
 
-    int GetDirection(Vector2Int from, Vector2Int to)
-    {
-        Vector2Int delta = to - from;
-        
-        if (delta.x < 0 && delta.y == 0) return 0; // Up
-        if (delta.y > 0 && delta.x == 0) return 1; // Right
-        if (delta.x > 0 && delta.y == 0) return 2; // Down
-        if (delta.y < 0 && delta.x == 0) return 3; // Left
-        
-        return -1;
-    }
-
     void CheckExitReached()
     {
         Collider[] colliders = Physics.OverlapSphere(transform.position, 1f);
@@ -227,19 +248,20 @@ public class Block : MonoBehaviour
             ExitTrigger exit = col.GetComponent<ExitTrigger>();
             if (exit != null && exit.ColorId == ColorId)
             {
-                StartCoroutine(ExitAnimation(exit.transform.position));
+                StartCoroutine(ExitAnimation(exit));
                 return;
             }
         }
     }
 
-    IEnumerator ExitAnimation(Vector3 exitPos)
+    IEnumerator ExitAnimation(ExitTrigger exit)
     {
         IsMoving = true;
         float duration = 0.3f;
         float elapsed = 0;
         Vector3 startPos = transform.position;
         Vector3 startScale = transform.localScale;
+        Vector3 exitPos = exit.transform.position;
 
         while (elapsed < duration)
         {
@@ -252,6 +274,6 @@ public class Block : MonoBehaviour
             yield return null;
         }
 
-        gameManager.OnBlockReachedExit(this, null);
+        gameManager.OnBlockReachedExit(this, exit);
     }
 }

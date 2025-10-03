@@ -26,15 +26,13 @@ public class LevelController : MonoBehaviour
 
     void Start()
     {
-        ResetProgress();
+        //ResetProgress();
         LoadSavedLevel();
     }
     
     void LoadSavedLevel()
     {
         currentLevelIndex = PlayerPrefs.GetInt(CURRENT_LEVEL_KEY, 0);
-        Debug.Log($"Kaydedilmiş seviye yükleniyor: Level {currentLevelIndex + 1}");
-        
         LoadLevel(currentLevelIndex);
     }
 
@@ -45,8 +43,6 @@ public class LevelController : MonoBehaviour
 
         if (levelJson != null)
         {
-            Debug.Log($"Level {levelIndex + 1} yükleniyor...");
-            
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.LoadLevelFromJson(levelJson);
@@ -81,7 +77,6 @@ public class LevelController : MonoBehaviour
         }
         else
         {
-            Debug.Log("Tüm leveller tamamlandı! İlk level'a dönülüyor...");
             currentLevelIndex = 0;
             LoadLevel(currentLevelIndex);
         }
@@ -89,7 +84,6 @@ public class LevelController : MonoBehaviour
 
     void ResetCurrentLevel()
     {
-        Debug.Log("Level resetleniyor...");
         LoadLevel(currentLevelIndex);
     }
 
@@ -97,7 +91,6 @@ public class LevelController : MonoBehaviour
     {
         PlayerPrefs.SetInt(CURRENT_LEVEL_KEY, levelIndex);
         PlayerPrefs.Save();
-        Debug.Log($"Level {levelIndex + 1} kaydedildi.");
     }
 
     void SaveHighestLevel(int levelIndex)
@@ -108,7 +101,6 @@ public class LevelController : MonoBehaviour
         {
             PlayerPrefs.SetInt(HIGHEST_LEVEL_KEY, levelIndex);
             PlayerPrefs.Save();
-            Debug.Log($"En yüksek seviye güncellendi: Level {levelIndex + 1}");
         }
     }
 
@@ -125,8 +117,6 @@ public class LevelController : MonoBehaviour
         
         currentLevelIndex = 0;
         LoadLevel(currentLevelIndex);
-        
-        Debug.Log("Oyun ilerlemesi sıfırlandı!");
     }
     
     public void SetMaxMoves(int moves)
@@ -146,7 +136,6 @@ public class LevelController : MonoBehaviour
 
         if (maxMoves > 0 && currentMoveCount >= maxMoves)
         {
-            Debug.Log("Hamle sayısı doldu!");
             OnOutOfMoves();
         }
     }
@@ -164,8 +153,6 @@ public class LevelController : MonoBehaviour
         if (levelCompleted) return;
 
         levelCompleted = true;
-        Debug.Log($"Level {currentLevelIndex + 1} tamamlandı! Kullanılan hamle: {currentMoveCount}/{maxMoves}");
-        
         SaveHighestLevel(currentLevelIndex);
         
         Invoke("ShowWinPanel", 0.5f);
@@ -200,11 +187,6 @@ public class LevelController : MonoBehaviour
         if (UIManager.Instance != null)
         {
             UIManager.Instance.UpdateMoveCount(currentMoveCount, maxMoves);
-        }
-
-        if (maxMoves > 0)
-        {
-            Debug.Log($"Hamle: {currentMoveCount}/{maxMoves}");
         }
     }
 }

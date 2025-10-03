@@ -73,13 +73,11 @@ public class ExitTrigger : MonoBehaviour
         if (particleSystem != null)
         {
             particleSystem.Play();
-            Debug.Log($"Exit particle oynatılıyor - Renk ID: {ColorId}");
         }
 
         if (exitAnimator != null)
         {
-            exitAnimator.SetTrigger(animHide);
-            Debug.Log("Exit Animator -> Hide tetiklendi");
+            exitAnimator.SetTrigger(animHide); 
         }
     }
 

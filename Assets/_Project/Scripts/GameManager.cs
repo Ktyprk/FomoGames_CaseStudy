@@ -21,13 +21,14 @@ public class GameManager : MonoBehaviour
 
     [Header("Exit Colors")]
     public Color[] exitColors = new Color[]
-    {
-        new Color(0.23f, 0.51f, 0.96f), // 0: Blue
-        Color.white,                      // 1: White
-        new Color(0.06f, 0.73f, 0.51f), // 2: Green
-        new Color(0.96f, 0.62f, 0.04f), // 3: Orange
-        new Color(0.94f, 0.29f, 0.29f)  // 4: Red
+    { 
+        Color.red,
+        Color.green,
+        Color.blue,
+        Color.yellow,
+        Color.magenta
     };
+
 
     private LevelData currentLevel;
     private List<Block> blocks = new List<Block>();
@@ -53,21 +54,17 @@ public class GameManager : MonoBehaviour
             Debug.LogError("Level JSON is null!");
             return;
         }
-
-        // Önceki level'ı temizle
+        
         ClearLevel();
         
-        // Yeni level'ı parse et
         currentLevel = JsonUtility.FromJson<LevelData>(jsonFile.text);
         blocksRemaining = currentLevel.MovableInfo.Count;
         
-        // Level'ı oluştur
         CreateLevel();
     }
 
     void CreateLevel()
     {
-        // Create cells
         foreach (var cellInfo in currentLevel.CellInfo)
         {
             Vector3 position = GetWorldPosition(cellInfo.Row, cellInfo.Col);
@@ -76,7 +73,6 @@ public class GameManager : MonoBehaviour
             cellObjects[new Vector2Int(cellInfo.Row, cellInfo.Col)] = cell;
         }
 
-        // Create exits
         foreach (var exitInfo in currentLevel.ExitInfo)
         {
             Vector3 cellPosition = GetWorldPosition(exitInfo.Row, exitInfo.Col);
@@ -92,7 +88,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // Create blocks
         foreach (var movableInfo in currentLevel.MovableInfo)
         {
             Vector3 position = GetWorldPosition(movableInfo.Row, movableInfo.Col);
@@ -151,7 +146,6 @@ public class GameManager : MonoBehaviour
 
     public void OnBlockReachedExit(Block block, ExitTrigger exit)
     {
-        // Exit particle efektini oynat
         if (exit != null)
         {
             exit.PlayExitParticle();
@@ -160,7 +154,6 @@ public class GameManager : MonoBehaviour
         blocks.Remove(block);
         blocksRemaining--;
 
-        // Block'u biraz gecikmeli yok et (particle görsün diye)
         Destroy(block.gameObject, 0.2f);
 
         if (blocksRemaining <= 0)
